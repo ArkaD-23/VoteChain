@@ -1,11 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { gsap } from 'gsap';
+import { useGlobalContext } from '../context';
 
 const Home = () => {
   const formRef = useRef(null);
   const { register, handleSubmit, formState: { errors } } = useForm();
-
+  const { accounts, setAccounts } = useGlobalContext();
   useEffect(() => {
     // GSAP animations
     gsap.fromTo(
@@ -18,6 +19,23 @@ const Home = () => {
   const onSubmit = (data) => {
     console.log('Form Submitted:', data);
   };
+
+  const connectWallet = async () => {
+    try {
+      const acc = await window.ethereum.request({ 
+        method: "eth_requestAccounts",
+       });
+       setAccounts(acc);
+       console.log("Account connected: ", acc[0]);
+    } catch (error) {
+        console.log(error);
+    }
+  }
+
+  useEffect(() => {
+    connectWallet();
+  }, [])
+  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-700 via-indigo-800 to-gray-900 p-4">
