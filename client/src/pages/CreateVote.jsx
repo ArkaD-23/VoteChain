@@ -1,24 +1,46 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { gsap } from "gsap";
+import { useGlobalContext } from '../context';
+import { ethers } from 'ethers';
 
 const CreateVote = () => {
   const {
     register,
     handleSubmit,
     reset,
-    watch,
     formState: { errors },
   } = useForm();
 
+  const { accounts } = useGlobalContext();
   const [candidates, setCandidates] = useState([]);
+  const [contract, setContract] = useState(null);
   const formRefCreate = useRef(null);
   const formRefCandidates = useRef(null);
 
-  const addCandidate = (data) => {
-    setCandidates([...candidates, data]);
-    reset({ candidateName: "", candidatePhoto: "" });
-  };
+  const contractABI = [];
+  const contractAddress = ""; 
+
+  useEffect(() => {
+    const initializeContract = async () => {
+      try {
+        if (window.ethereum && accounts[0]) {
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          const signer = provider.getSigner();
+          const votingContract = new ethers.Contract(contractAddress, contractABI, signer);
+          setContract(votingContract);
+
+          votingContract.on("VoteCreated", (voteId, title) => {
+            console.log(`Vote created with ID: ${voteId}`);
+          });
+        }
+      } catch (err) {
+        console.error("Failed to initialize contract:", err);
+      }
+    };
+
+    initializeContract();
+  }, [accounts]);
 
   useEffect(() => {
     gsap.fromTo(
@@ -33,7 +55,17 @@ const CreateVote = () => {
     );
   }, []);
 
-  const onSubmitVote = (data) => {
+  const addCandidate = (data) => {
+    setCandidates([...candidates, data]);
+    reset({ candidateName: "", candidatePhoto: "" });
+  };
+
+  const onSubmitVote = async (data) => {
+    if (!accounts[0]) {
+      alert("Please connect your wallet first");
+      return;
+    }
+
     if (candidates.length === 0) {
       alert("Please add at least one candidate before creating the vote.");
       return;
@@ -44,15 +76,58 @@ const CreateVote = () => {
       return;
     }
 
-    const voteData = {
-      title: data.title,
-      description: data.description,
-      startDate: data.startDate,
-      endDate: data.endDate,
-      candidates: candidates,
-    };
-    console.log("Vote Created:", voteData);
-    // Perform API call or further logic here
+    try {
+      const candidateNames = candidates.map(c => c.candidateName);
+      const tx = await contract.createVote(data.title, candidateNames);
+      await tx.wait();
+      
+      console.log("Vote Created:", {
+        title: data.title,
+        description: data.description,
+        startDate: data.startDate,
+        endDate: data.endDate,
+        candidates: candidates,
+      });
+
+      alert("Vote created successfully!");
+      reset();
+      setCandidates([]);
+    } catch (err) {
+      console.error("Error creating vote:", err);
+      alert("Failed to create vote: " + err.message);
+    }
+  };
+
+  const endVote = async (voteId) => {
+    try {
+      const tx = await contract.endVote(voteId);
+      await tx.wait();
+      alert("Vote ended successfully!");
+    } catch (err) {
+      console.error("Error ending vote:", err);
+      alert("Failed to end vote: " + err.message);
+    }
+  };
+
+  const getCandidate = async (voteId, candidateId) => {
+    try {
+      const [name, voteCount] = await contract.getCandidate(voteId, candidateId);
+      return { name, voteCount: voteCount.toNumber() };
+    } catch (err) {
+      console.error("Error getting candidate:", err);
+      throw err;
+    }
+  };
+
+  const incrementVoteCount = async (voteId, candidateId) => {
+    try {
+      const tx = await contract.incrementVoteCount(voteId, candidateId);
+      await tx.wait();
+      alert("Vote counted successfully!");
+    } catch (err) {
+      console.error("Error incrementing vote:", err);
+      alert("Failed to increment vote: " + err.message);
+    }
   };
 
   return (
@@ -83,7 +158,6 @@ const CreateVote = () => {
           {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>}
         </div>
 
-        {/* Voting Start Date */}
         <div className="mb-4">
           <label className="block text-white mb-2">Voting Start Date</label>
           <input
@@ -94,7 +168,6 @@ const CreateVote = () => {
           {errors.startDate && <p className="text-red-500 text-sm mt-1">{errors.startDate.message}</p>}
         </div>
 
-        {/* Voting End Date */}
         <div className="mb-4">
           <label className="block text-white mb-2">Voting End Date</label>
           <input

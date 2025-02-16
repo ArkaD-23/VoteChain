@@ -1,18 +1,50 @@
 import React, { useState, useEffect, useRef } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import { gsap } from 'gsap';
+import { ethers } from 'ethers';
+import { useGlobalContext } from '../context';
 
 const CastVote = () => {
   const [selectedCandidate, setSelectedCandidate] = useState(null);
+  const [contract, setContract] = useState(null);
+  const [voteId, setVoteId] = useState(null);
+  //const [candidates, setCandidates] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const { accounts } = useGlobalContext();
+  
   const formRef = useRef(null);
   const candidatesRef = useRef([]);
-
-  // Dummy candidates array
   const candidates = [
     { id: 1, name: 'Alice', photo: 'https://via.placeholder.com/150' },
     { id: 2, name: 'Bob', photo: 'https://via.placeholder.com/150' },
     { id: 3, name: 'Charlie', photo: 'https://via.placeholder.com/150' },
-  ];
+     ];
+
+  const contractABI = [];
+  const contractAddress = "";
+
+  useEffect(() => {
+    const initializeContract = async () => {
+      try {
+        if (window.ethereum && accounts[0]) {
+          const provider = new ethers.providers.Web3Provider(window.ethereum);
+          const signer = provider.getSigner();
+          const votingContract = new ethers.Contract(contractAddress, contractABI, signer);
+          setContract(votingContract);
+          votingContract.on("Voted", (voter, voteId, candidateId) => {
+            if (voter.toLowerCase() === accounts[0].toLowerCase()) {
+              toast.success(`Vote successfully recorded for candidate ${candidateId}`);
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Failed to initialize contract:", err);
+        toast.error("Failed to connect to voting system");
+      }
+    };
+
+    initializeContract();
+  }, [accounts]);
 
   useEffect(() => {
     // Animation for the form
@@ -32,19 +64,54 @@ const CastVote = () => {
     });
   }, []);
 
-  const handleVote = () => {
-    if (selectedCandidate) {
-      toast.success(`Thank you for voting for candidate ID: ${selectedCandidate}`);
-    } else {
+  const checkIfVoted = async () => {
+    try {
+      if (!contract || !accounts[0] || !voteId) return false;
+      const hasVoted = await contract.hasVoted(accounts[0], voteId);
+      return hasVoted;
+    } catch (err) {
+      console.error("Error checking vote status:", err);
+      return false;
+    }
+  };
+
+  const handleVote = async () => {
+    if (!selectedCandidate) {
       toast.error('Please select a candidate before voting.');
+      return;
+    }
+
+    if (!accounts[0]) {
+      toast.error('Please connect your wallet to vote.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const alreadyVoted = await checkIfVoted();
+      if (alreadyVoted) {
+        toast.error('You have already voted in this election.');
+        return;
+      }
+      const tx = await contract.vote(voteId, selectedCandidate);
+      toast.loading('Casting your vote...');
+      await tx.wait();
+      
+      setSelectedCandidate(null);
+    } catch (err) {
+      console.error("Error casting vote:", err);
+      toast.error(err.message || 'Failed to cast vote. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center bg-gradient-to-br from-purple-700 via-indigo-800 to-gray-900 p-6">
       <Toaster position="top-center" reverseOrder={false} />
+      
       <h1 className="text-3xl font-bold text-white mb-6">Vote for Your Candidate</h1>
-
+      
       <div
         ref={formRef}
         className="bg-gray-800 p-6 rounded-lg shadow-md w-full max-w-3xl mb-8"
@@ -77,9 +144,12 @@ const CastVote = () => {
 
       <button
         onClick={handleVote}
-        className="w-full md:w-auto bg-gradient-to-r from-green-500 to-green-600 text-white py-2 px-6 rounded-md shadow-md hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all"
+        disabled={loading}
+        className={`w-full md:w-auto bg-gradient-to-r from-green-500 to-green-600 text-white py-2 px-6 rounded-md shadow-md hover:from-green-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-all ${
+          loading ? 'opacity-50 cursor-not-allowed' : ''
+        }`}
       >
-        Submit Vote
+        {loading ? 'Submitting...' : 'Submit Vote'}
       </button>
     </div>
   );
