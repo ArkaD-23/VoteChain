@@ -16,10 +16,6 @@ const Home = () => {
     );
   }, []);
 
-  const onSubmit = (data) => {
-    console.log('Form Submitted:', data);
-  };
-
   const connectWallet = async () => {
     try {
       const acc = await window.ethereum.request({ 
@@ -34,7 +30,26 @@ const Home = () => {
 
   useEffect(() => {
     connectWallet();
-  }, [])
+  }, []);
+
+  const onSubmit = async (data) => {
+    if (!contract) {
+      console.error("Contract is not connected");
+      return;
+    }
+
+    try {
+      const tx = await contract.registerUser(
+        data.username,
+        data.email,
+        data.password
+      );
+      await tx.wait();
+      console.log("User registered successfully!");
+    } catch (error) {
+      console.error("Error registering user:", error);
+    }
+  };
   
 
   return (

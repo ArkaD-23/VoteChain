@@ -1,4 +1,4 @@
-import contract from "./Cast_Vote.json";
+import contract from "./CastVote.json";
 
-export const ADDRESS = "0xCA9A5cDeb4Da61C38F67768E0B41DFb46948d8d4";
+export const ADDRESS = "0x4B66838A6540f1a85BC0442De6c3755882B3c034";
 export const { abi: ABI } = contract;
