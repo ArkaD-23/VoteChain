@@ -1,9 +1,10 @@
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Home from "./pages/Home";
+import Register from "./pages/Register";
 import Navbar from "./components/Navbar";
 import CreateVote from "./pages/CreateVote";
 import CastVote from "./pages/CastVote";
+import Home from "./pages/Home";
 
 const App = () => {
   console.log("App is rendering!");
@@ -12,7 +13,8 @@ const App = () => {
     <BrowserRouter>
         <Navbar />
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Register />} />
+          <Route path="/home" element={<Home />} />
           <Route path="/create" element={<CreateVote />} />
           <Route path="/cast" element={<CastVote />} />
         </Routes>
