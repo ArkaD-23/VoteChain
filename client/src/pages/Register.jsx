@@ -1,69 +1,77 @@
-import React, { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom'; 
-import { useForm } from 'react-hook-form';
-import { gsap } from 'gsap';
-import { useGlobalContext } from '../context';
+import React, { useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { gsap } from "gsap";
+import { useGlobalContext } from "../context";
+import toast from "react-hot-toast";
 
 const Register = () => {
   const formRef = useRef(null);
-  const { register, handleSubmit, formState: { errors } } = useForm();
-  const { isRegistered , accounts, setAccounts } = useGlobalContext();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
+  const {
+    contracts,
+    isRegistered,
+    setIsRegistered,
+    accounts,
+    setAccounts,
+    updateRegistrationStatus,
+  } = useGlobalContext();
   useEffect(() => {
-    // GSAP animations
     gsap.fromTo(
       formRef.current,
       { opacity: 0, y: 50 },
-      { opacity: 1, y: 0, duration: 1.5, ease: 'power3.out' }
+      { opacity: 1, y: 0, duration: 1.5, ease: "power3.out" }
     );
   }, []);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const firstMount = () => {
-      if (accounts.length > 0) {
-        navigate('/home');
-      }
+    updateRegistrationStatus();
+    if (isRegistered) {
+      navigate("/home");
     };
-    firstMount();
-  }, [accounts])
-  
-
+    console.log("Register: ", isRegistered);
+  }, [updateRegistrationStatus]);
 
   const connectWallet = async () => {
     try {
-      const acc = await window.ethereum.request({ 
+      const acc = await window.ethereum.request({
         method: "eth_requestAccounts",
-       });
-       setAccounts(acc);
-       console.log("Account connected: ", acc[0]);
+      });
+      setAccounts(acc);
+      console.log("Account connected: ", acc[0]);
     } catch (error) {
-        console.log(error);
+      console.log(error);
     }
-  }
+  };
 
   useEffect(() => {
     connectWallet();
   }, []);
 
   const onSubmit = async (data) => {
-    if (!contract) {
+    if (!contracts) {
       console.error("Contract is not connected");
+      toast.error("Failed to connect to the registration system");
       return;
     }
-
     try {
-      const tx = await contract.registerUser(
-        data.username,
-        data.email,
-        data.password
-      );
-      await tx.wait();
+      const tx = await contracts.Register.methods
+        .registerUser(data.username, data.email, data.password)
+        .send({ from: accounts[0] });
       console.log("User registered successfully!");
+      toast.success("User registered successfully!");
+      navigate("/home");
+      updateRegistrationStatus();
     } catch (error) {
       console.error("Error registering user:", error);
+      toast.error("Internal server error. Please try again later.");
     }
   };
-  
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-700 via-indigo-800 to-gray-900 p-4">
@@ -87,12 +95,14 @@ const Register = () => {
               type="text"
               id="username"
               className={`w-full px-4 py-2 bg-gray-800 text-white border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all ${
-                errors.username ? 'border-red-500' : 'border-gray-700'
+                errors.username ? "border-red-500" : "border-gray-700"
               }`}
-              {...register('username', { required: 'Username is required' })}
+              {...register("username", { required: "Username is required" })}
             />
             {errors.username && (
-              <p className="text-red-500 text-sm mt-1">{errors.username.message}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors.username.message}
+              </p>
             )}
           </div>
 
@@ -107,12 +117,14 @@ const Register = () => {
               type="email"
               id="email"
               className={`w-full px-4 py-2 bg-gray-800 text-white border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all ${
-                errors.email ? 'border-red-500' : 'border-gray-700'
+                errors.email ? "border-red-500" : "border-gray-700"
               }`}
-              {...register('email', { required: 'Email is required' })}
+              {...register("email", { required: "Email is required" })}
             />
             {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors.email.message}
+              </p>
             )}
           </div>
 
@@ -127,12 +139,14 @@ const Register = () => {
               type="password"
               id="password"
               className={`w-full px-4 py-2 bg-gray-800 text-white border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all ${
-                errors.password ? 'border-red-500' : 'border-gray-700'
+                errors.password ? "border-red-500" : "border-gray-700"
               }`}
-              {...register('password', { required: 'Password is required' })}
+              {...register("password", { required: "Password is required" })}
             />
             {errors.password && (
-              <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+              <p className="text-red-500 text-sm mt-1">
+                {errors.password.message}
+              </p>
             )}
           </div>
 

@@ -1,4 +1,5 @@
-import { createContext, useState, useContext , useEffect } from "react";
+import { createContext, useState, useContext, useEffect } from "react";
+import Web3 from "web3";
 import {
   CREATE_VOTE_ADDRESS,
   CREATE_VOTE_ABI,
@@ -7,6 +8,8 @@ import {
   REGISTER_ADDRESS,
   REGISTER_ABI,
 } from "../contracts/contractConfig.js";
+import toast, { Toaster } from "react-hot-toast";
+import { set } from "react-hook-form";
 
 const GlobalContext = createContext();
 
@@ -18,19 +21,23 @@ export const GlobalContextProvider = ({ children }) => {
     Register: "",
   });
   const [isRegistered, setIsRegistered] = useState(false);
-  
-  const updateRegistrationStatus = async () => {
-    const name = await contracts.Register.methods
-      .getUser()
-      .call({ from: accounts[0] });
 
-    setIsRegistered(!!name);
+  const updateRegistrationStatus = async () => {
+    try {
+      const result = await contracts.Register.methods
+      .getUser(accounts[0])
+      .call();
+      const [username, email, isRegistered] = Object.values(result);
+      setIsRegistered(isRegistered);
+    } catch (error) {
+      console.error("Error fetching user registration status:", error);
+      toast.error("Failed to fetch user registration status");
+    }
   };
 
   useEffect(() => {
     try {
       const web3 = new Web3(window.ethereum);
-
       const Create_Vote_Contract = new web3.eth.Contract(
         CREATE_VOTE_ABI,
         CREATE_VOTE_ADDRESS
@@ -39,27 +46,22 @@ export const GlobalContextProvider = ({ children }) => {
         CAST_VOTE_ABI,
         CAST_VOTE_ADDRESS
       );
-
-      const Register = new web3.eth.Contract(
+      const Register_Contract = new web3.eth.Contract(
         REGISTER_ABI,
         REGISTER_ADDRESS
       );
-
       setContracts({
         Create_Vote: Create_Vote_Contract,
         Cast_Vote: Cast_Vote_Contract,
-        Register: Register,
+        Register: Register_Contract,
       });
-
-      console.log(contracts);
-
+      console.log("Contracts: ", contracts);
       const getAccounts = async () => {
         await window.eth_requestAccounts;
         const accounts = await web3.eth.getAccounts();
         setAccounts(accounts);
-        console.log(accounts);
+        console.log("Accounts connected:", accounts);
       };
-
       getAccounts();
     } catch (error) {
       console.log(error);
@@ -68,7 +70,14 @@ export const GlobalContextProvider = ({ children }) => {
 
   return (
     <GlobalContext.Provider
-      value={{ accounts, setAccounts, contracts, setContracts , isRegistered, updateRegistrationStatus, setIsRegistered}}
+      value={{
+        accounts,
+        setAccounts,
+        contracts,
+        isRegistered,
+        setIsRegistered,
+        updateRegistrationStatus,
+      }}
     >
       {children}
     </GlobalContext.Provider>

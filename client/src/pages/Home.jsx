@@ -1,28 +1,47 @@
-import { useEffect, useRef } from 'react';
-import { gsap } from 'gsap';
+import { useEffect, useRef } from "react";
+import { gsap } from "gsap";
+import { useGlobalContext } from "../context";
+import { useNavigate } from "react-router-dom";
 
 const Home = () => {
-  const containerRef = useRef(null);
+  const headingRef = useRef(null);
+  const paragraphRef = useRef(null);
+  const { isRegistered , accounts, setAccounts } = useGlobalContext();
+  const navigate = useNavigate();
 
   useEffect(() => {
     gsap.fromTo(
-      containerRef.current,
+      headingRef.current,
       { opacity: 0, y: 50 },
-      { opacity: 1, y: 0, duration: 1.5, ease: 'power3.out' }
+      { opacity: 1, y: 0, duration: 1.5, ease: "power3.out" }
+    );
+    gsap.fromTo(
+      paragraphRef.current,
+      { opacity: 0, y: 50 },
+      { opacity: 1, y: 0, duration: 1.5, ease: "power3.out" }
     );
   }, []);
 
+  useEffect(() => {
+    const firstMount = () => {
+      console.log("Home: ", isRegistered);
+      if (!isRegistered) {
+        navigate("/");
+        return(<div>...</div>)
+      }
+    };
+    firstMount();
+  }, [accounts]);
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-700 via-indigo-800 to-gray-900 p-4">
-      <div
-        ref={containerRef}
-        className="w-full max-w-md bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 shadow-xl rounded-lg p-8 border border-gray-600 text-center"
-      >
-        <h1 className="text-3xl font-bold text-white mb-4">VoteChain</h1>
-        <p className="text-gray-300 text-lg">
-          A decentralized, secure, and transparent voting platform powered by blockchain technology.
-        </p>
-      </div>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-700 via-indigo-800 to-gray-900 p-4 text-center">
+      <h1 ref={headingRef} className="text-5xl font-bold text-white mb-6">
+        VoteChain
+      </h1>
+      <p ref={paragraphRef} className="text-gray-300 text-2xl max-w-3xl">
+        A decentralized, secure, and transparent voting platform powered by
+        blockchain technology.
+      </p>
     </div>
   );
 };

@@ -9,6 +9,7 @@ const Navbar = () => {
   
   useEffect(() => {
     updateRegistrationStatus();
+    console.log("Navbar: ", isRegistered);
   }, [updateRegistrationStatus]);
 
   return (
