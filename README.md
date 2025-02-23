@@ -12,10 +12,11 @@ This project is a **secure, transparent, and decentralized** blockchain-based vo
 ## Technologies Used
 - Solidity (Smart Contracts)
 - Web3.js (Blockchain Interactions)
+- ethers.js (Blockchain Interactions)
 - Ganache (Local Ethereum Blockchain)
 - MetaMask (Ethereum Wallet)
 - React.js (Frontend UI)
-- Node.js & Express (Backend API)
+- Node.js 
 
 ## Prerequisites
 Ensure you have the following installed:
@@ -81,5 +82,4 @@ npm start
 This project is licensed under the MIT License.
 
 ---
-**Contributors:** Your Name
 
