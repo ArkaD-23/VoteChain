@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { gsap } from "gsap";
-import { useGlobalContext } from '../context';
-import { ethers } from 'ethers';
+import { useGlobalContext } from "../context";
+import { ethers } from "ethers";
 
 const CreateVote = () => {
   const {
@@ -12,35 +12,11 @@ const CreateVote = () => {
     formState: { errors },
   } = useForm();
 
-  const { accounts } = useGlobalContext();
   const [candidates, setCandidates] = useState([]);
   const [contract, setContract] = useState(null);
   const formRefCreate = useRef(null);
   const formRefCandidates = useRef(null);
-
-  const contractABI = [];
-  const contractAddress = ""; 
-
-  useEffect(() => {
-    const initializeContract = async () => {
-      try {
-        if (window.ethereum && accounts[0]) {
-          const provider = new ethers.providers.Web3Provider(window.ethereum);
-          const signer = provider.getSigner();
-          const votingContract = new ethers.Contract(contractAddress, contractABI, signer);
-          setContract(votingContract);
-
-          votingContract.on("VoteCreated", (voteId, title) => {
-            console.log(`Vote created with ID: ${voteId}`);
-          });
-        }
-      } catch (err) {
-        console.error("Failed to initialize contract:", err);
-      }
-    };
-
-    initializeContract();
-  }, [accounts]);
+  const { contracts, accounts } = useGlobalContext();
 
   useEffect(() => {
     gsap.fromTo(
@@ -71,27 +47,21 @@ const CreateVote = () => {
       return;
     }
 
-    if (new Date(data.startDate) >= new Date(data.endDate)) {
+    const startDate = Math.floor(new Date(data.startDate).getTime() / 1000);
+    const endDate = Math.floor(new Date(data.endDate).getTime() / 1000);
+
+    if (startDate >= endDate) {
       alert("End date must be after the start date.");
       return;
     }
 
     try {
-      const candidateNames = candidates.map(c => c.candidateName);
-      const tx = await contract.createVote(data.title, candidateNames);
-      await tx.wait();
-      
-      console.log("Vote Created:", {
-        title: data.title,
-        description: data.description,
-        startDate: data.startDate,
-        endDate: data.endDate,
-        candidates: candidates,
-      });
+      const candidateNames = candidates.map((c) => c.candidateName);
 
-      alert("Vote created successfully!");
-      reset();
-      setCandidates([]);
+      const tx = await contracts.Create_Vote.methods
+        .createVote(data.title, candidateNames, startDate, endDate)
+        .send({ from: accounts[0] });
+      console.log("Transaction Hash:", tx.transactionHash);
     } catch (err) {
       console.error("Error creating vote:", err);
       alert("Failed to create vote: " + err.message);
@@ -111,7 +81,10 @@ const CreateVote = () => {
 
   const getCandidate = async (voteId, candidateId) => {
     try {
-      const [name, voteCount] = await contract.getCandidate(voteId, candidateId);
+      const [name, voteCount] = await contract.getCandidate(
+        voteId,
+        candidateId
+      );
       return { name, voteCount: voteCount.toNumber() };
     } catch (err) {
       console.error("Error getting candidate:", err);
@@ -130,8 +103,6 @@ const CreateVote = () => {
     }
   };
 
-  
-
   return (
     <div className="min-h-screen flex flex-col items-center bg-gradient-to-br from-purple-700 via-indigo-800 to-gray-900 p-6">
       <h1 className="text-3xl font-bold text-white mb-6">Create a Vote</h1>
@@ -148,16 +119,24 @@ const CreateVote = () => {
             {...register("title", { required: "Title is required" })}
             className="w-full px-4 py-2 bg-gray-800 text-white border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
-          {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>}
+          {errors.title && (
+            <p className="text-red-500 text-sm mt-1">{errors.title.message}</p>
+          )}
         </div>
 
         <div className="mb-4">
           <label className="block text-white mb-2">Vote Description</label>
           <textarea
-            {...register("description", { required: "Description is required" })}
+            {...register("description", {
+              required: "Description is required",
+            })}
             className="w-full px-4 py-2 bg-gray-800 text-white border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
           ></textarea>
-          {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description.message}</p>}
+          {errors.description && (
+            <p className="text-red-500 text-sm mt-1">
+              {errors.description.message}
+            </p>
+          )}
         </div>
 
         <div className="mb-4">
@@ -167,7 +146,11 @@ const CreateVote = () => {
             {...register("startDate", { required: "Start date is required" })}
             className="w-full px-4 py-2 bg-gray-800 text-white border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
-          {errors.startDate && <p className="text-red-500 text-sm mt-1">{errors.startDate.message}</p>}
+          {errors.startDate && (
+            <p className="text-red-500 text-sm mt-1">
+              {errors.startDate.message}
+            </p>
+          )}
         </div>
 
         <div className="mb-4">
@@ -177,7 +160,11 @@ const CreateVote = () => {
             {...register("endDate", { required: "End date is required" })}
             className="w-full px-4 py-2 bg-gray-800 text-white border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
           />
-          {errors.endDate && <p className="text-red-500 text-sm mt-1">{errors.endDate.message}</p>}
+          {errors.endDate && (
+            <p className="text-red-500 text-sm mt-1">
+              {errors.endDate.message}
+            </p>
+          )}
         </div>
 
         <button
@@ -188,7 +175,10 @@ const CreateVote = () => {
         </button>
       </form>
 
-      <div ref={formRefCandidates} className="w-full max-w-2xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 shadow-xl rounded-lg p-8 border border-gray-600">
+      <div
+        ref={formRefCandidates}
+        className="w-full max-w-2xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 shadow-xl rounded-lg p-8 border border-gray-600"
+      >
         <h2 className="text-2xl font-bold text-white mb-6">Add Candidates</h2>
 
         <form onSubmit={handleSubmit(addCandidate)} className="space-y-4">
@@ -196,20 +186,28 @@ const CreateVote = () => {
             <label className="block text-white mb-2">Candidate Name</label>
             <input
               type="text"
-              {...register("candidateName", { required: "Candidate name is required" })}
+              {...register("candidateName")}
               className="w-full px-4 py-2 bg-gray-800 text-white border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
-            {errors.candidateName && <p className="text-red-500 text-sm mt-1">{errors.candidateName.message}</p>}
+            {errors.candidateName && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.candidateName.message}
+              </p>
+            )}
           </div>
 
           <div>
             <label className="block text-white mb-2">Candidate Photo</label>
             <input
               type="file"
-              {...register("candidatePhoto", { required: "Candidate photo is required" })}
+              {...register("candidatePhoto")}
               className="w-full text-white bg-gray-800 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
-            {errors.candidatePhoto && <p className="text-red-500 text-sm mt-1">{errors.candidatePhoto.message}</p>}
+            {errors.candidatePhoto && (
+              <p className="text-red-500 text-sm mt-1">
+                {errors.candidatePhoto.message}
+              </p>
+            )}
           </div>
 
           <button
@@ -224,7 +222,10 @@ const CreateVote = () => {
           <h3 className="text-xl font-bold text-white mb-4">Candidates List</h3>
           <ul className="space-y-2">
             {candidates.map((candidate, index) => (
-              <li key={index} className="text-white bg-gray-800 px-4 py-2 rounded-md shadow-md">
+              <li
+                key={index}
+                className="text-white bg-gray-800 px-4 py-2 rounded-md shadow-md"
+              >
                 {candidate.candidateName}
               </li>
             ))}

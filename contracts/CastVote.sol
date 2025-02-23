@@ -21,7 +21,6 @@ contract CastVote {
     function vote(uint voteId, uint candidateId) public {
         require(!hasVoted[msg.sender][voteId], "You have already voted");
 
-        // Call CreateVote contract to increment vote count
         (bool success, ) = createVoteContract.call(
             abi.encodeWithSignature("incrementVoteCount(uint256,uint256)", voteId, candidateId)
         );

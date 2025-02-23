@@ -25,11 +25,6 @@ contract CreateVote {
     event VoteCreated(uint voteId, string title);
     event CandidateAdded(uint voteId, uint candidateId, string name);
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Only owner can call this function");
-        _;
-    }
-
     constructor() {
         owner = msg.sender;
     }
@@ -39,7 +34,7 @@ contract CreateVote {
         string[] memory candidateNames,
         uint startDate,
         uint endDate
-    ) public onlyOwner {
+    ) public {
         voteCount++;
         Vote storage newVote = votes[voteCount];
         newVote.id = voteCount;
@@ -65,7 +60,7 @@ contract CreateVote {
         emit VoteCreated(voteCount, title);
     }
 
-    function endVote(uint voteId) public onlyOwner {
+    function endVote(uint voteId) public {
         require(voteId > 0 && voteId <= voteCount, "Invalid vote ID");
         require(
             block.timestamp >= votes[voteId].endDate,
